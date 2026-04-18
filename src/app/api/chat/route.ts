@@ -70,25 +70,12 @@ export const POST = async (req: NextRequest) => {
           },
         }),
         getCurrentTime: tool({
-          description:
-            "Get the current date and time. Use when the user asks about the time or date.",
+          description: "Get current time.",
           inputSchema: z.object({}),
-          execute: async () => {
-            const now = new Date();
-            return {
-              time: now.toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              }),
-              date: now.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              }),
-            };
-          },
+          execute: async () => ({
+            time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }),
+            date: new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" }),
+          }),
         }),
       },
       stopWhen: stepCountIs(5),
@@ -147,7 +134,7 @@ Rules:
         });
 
         const audioBuffer = ttsResponse.data;
-        audio = Buffer.from(audioBuffer).toString("base64");
+        audio = Buffer.from(audioBuffer).toString("base64"); // binary to buffer
       } catch (ttsError) {
         console.error("TTS error:", ttsError);
       }
