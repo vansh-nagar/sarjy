@@ -12,14 +12,27 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { MessageSquarePlus, MessageSquare, Trash2, Loader2, Pencil } from "lucide-react";
+import {
+  MessageSquarePlus,
+  MessageSquare,
+  Trash2,
+  Loader2,
+  Pencil,
+} from "lucide-react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const SessionsSidebar = () => {
-  const { sessions, sessionId, setSessionId, setMessages, setSessions, setIsLoadingSession } =
-    useChatStore();
+  const {
+    sessions,
+    sessionId,
+    isLoading,
+    setSessionId,
+    setMessages,
+    setSessions,
+    setIsLoadingSession,
+  } = useChatStore();
 
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -36,7 +49,9 @@ const SessionsSidebar = () => {
     if (!title.trim()) return;
     setCreating(true);
     try {
-      const { data } = await axios.post("/api/sessions", { title: title.trim() });
+      const { data } = await axios.post("/api/sessions", {
+        title: title.trim(),
+      });
       setSessions([data.session, ...sessions]);
       setSessionId(data.session.id);
       setMessages([]);
@@ -60,12 +75,14 @@ const SessionsSidebar = () => {
       if (confirmId === sessionId) {
         if (next.length > 0) {
           setSessionId(next[0].id);
-          const { data } = await axios.get(`/api/sessions/${next[0].id}/messages`);
+          const { data } = await axios.get(
+            `/api/sessions/${next[0].id}/messages`,
+          );
           setMessages(
             data.messages.map((m: { role: string; content: string }) => ({
               role: m.role as "user" | "assistant",
               content: m.content,
-            }))
+            })),
           );
         } else {
           setSessionId("");
@@ -85,8 +102,14 @@ const SessionsSidebar = () => {
     if (!renameId || !renameTitle.trim()) return;
     setRenaming(true);
     try {
-      await axios.patch(`/api/sessions/${renameId}`, { title: renameTitle.trim() });
-      setSessions(sessions.map((s) => s.id === renameId ? { ...s, title: renameTitle.trim() } : s));
+      await axios.patch(`/api/sessions/${renameId}`, {
+        title: renameTitle.trim(),
+      });
+      setSessions(
+        sessions.map((s) =>
+          s.id === renameId ? { ...s, title: renameTitle.trim() } : s,
+        ),
+      );
       toast.success("Session renamed");
       setRenameId(null);
       setRenameTitle("");
@@ -98,17 +121,19 @@ const SessionsSidebar = () => {
   };
 
   const handleSelectSession = async (id: string) => {
-    if (id === sessionId) return;
+    if (id === sessionId || isLoading) return;
     setSessionId(id);
     setIsLoadingSession(true);
     try {
       const { data } = await axios.get(`/api/sessions/${id}/messages`);
       setMessages(
-        data.messages.map((m: { role: string; content: string; createdAt?: string }) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          createdAt: m.createdAt,
-        }))
+        data.messages.map(
+          (m: { role: string; content: string; createdAt?: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            createdAt: m.createdAt,
+          }),
+        ),
       );
     } catch {
       setMessages([]);
@@ -125,7 +150,10 @@ const SessionsSidebar = () => {
     if (days === 0) return "Today";
     if (days === 1) return "Yesterday";
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const confirmSession = sessions.find((s) => s.id === confirmId);
@@ -138,6 +166,7 @@ const SessionsSidebar = () => {
             onClick={() => setNewChatOpen(true)}
             variant="outline"
             className="w-full justify-start gap-2 text-sm"
+            disabled={isLoading}
           >
             <MessageSquarePlus className="h-4 w-4 shrink-0" />
             New Chat
@@ -155,30 +184,43 @@ const SessionsSidebar = () => {
                 key={s.id}
                 onClick={() => handleSelectSession(s.id)}
                 className={cn(
-                  "group w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 cursor-pointer",
+                  "group w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1",
+                  isLoading
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer",
                   s.id === sessionId
                     ? "bg-primary/10 text-primary"
-                    : "hover:bg-muted text-foreground"
+                    : !isLoading && "hover:bg-muted text-foreground",
                 )}
               >
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   <span className="flex items-center gap-2">
-                    <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
                     <span className="truncate font-medium">{s.title}</span>
                   </span>
-                  <span className="text-[10px] text-muted-foreground pl-5">
+                  <span className="text-[10px] text-muted-foreground">
                     {formatDate(s.updatedAt)}
                   </span>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setRenameId(s.id); setRenameTitle(s.title); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:text-primary shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isLoading) {
+                      setRenameId(s.id);
+                      setRenameTitle(s.title);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:text-primary shrink-0 disabled:pointer-events-none"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setConfirmId(s.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:text-destructive shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isLoading) setConfirmId(s.id);
+                  }}
+                  disabled={isLoading}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:text-destructive shrink-0 disabled:pointer-events-none"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -205,13 +247,23 @@ const SessionsSidebar = () => {
               Cancel
             </Button>
             <Button onClick={handleCreate} disabled={!title.trim() || creating}>
-              {creating ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating...</> : "Create"}
+              {creating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!renameId} onOpenChange={(o) => !renaming && !o && setRenameId(null)}>
+      <Dialog
+        open={!!renameId}
+        onOpenChange={(o) => !renaming && !o && setRenameId(null)}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Rename Session</DialogTitle>
@@ -224,17 +276,34 @@ const SessionsSidebar = () => {
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameId(null)} disabled={renaming}>
+            <Button
+              variant="outline"
+              onClick={() => setRenameId(null)}
+              disabled={renaming}
+            >
               Cancel
             </Button>
-            <Button onClick={handleRename} disabled={!renameTitle.trim() || renaming}>
-              {renaming ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Renaming...</> : "Rename"}
+            <Button
+              onClick={handleRename}
+              disabled={!renameTitle.trim() || renaming}
+            >
+              {renaming ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Renaming...
+                </>
+              ) : (
+                "Rename"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmId} onOpenChange={(o) => !deleting && !o && setConfirmId(null)}>
+      <Dialog
+        open={!!confirmId}
+        onOpenChange={(o) => !deleting && !o && setConfirmId(null)}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Session</DialogTitle>

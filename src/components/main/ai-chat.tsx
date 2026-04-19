@@ -6,6 +6,15 @@ import { useChatStore } from "@/stores/use-chat-store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AZURE_VOICES } from "@/lib/azure-voices";
+import RoseCurveIcon from "@/components/main/rose-curve-icon";
+import {
   Conversation,
   ConversationContent,
   ConversationEmptyState,
@@ -30,10 +39,12 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
     isRecording,
     isProcessing,
     textAreaInput,
+    voice,
     setMessages,
     setSessionId,
     setSessions,
     setTextAreaInput,
+    setVoice,
     startListening,
     stopListening,
     onsubmit,
@@ -133,7 +144,7 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
           <p className="text-sm text-muted-foreground">Loading chat...</p>
         </div>
       )}
-      <Conversation className="w-full  flex-1 mb-20 custom-scrollbar">
+      <Conversation className="w-full flex-1 mb-28 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <ConversationContent className="p-0 pb-20">
           {messages.length === 0 ? (
             <ConversationEmptyState
@@ -159,10 +170,10 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="flex gap-2 items-end mt-2 absolute bottom-0 inset-x-0">
+      <div className="flex flex-col bg-background gap-2 border p-2 rounded-xl items-end mt-2 absolute bottom-0 inset-x-0">
         <Textarea
           ref={textareaRef}
-          className="rounded-lg resize-none flex-1 min-h-17.5"
+          className="rounded-lg resize-none flex-1 min-h-16 max-h-16  border-none"
           placeholder={isRecording ? "Listening..." : "Type here..."}
           value={textAreaInput}
           onChange={(e) => setTextAreaInput(e.target.value)}
@@ -174,8 +185,38 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
           }}
           disabled={isLoading}
         />
+        <div className="flex gap-2 items-center">
+          <Select value={voice} onValueChange={setVoice} disabled={isLoading}>
+            <SelectTrigger className="h-9 w-44 text-xs">
+              <SelectValue placeholder="Voice">
+                {(() => {
+                  const selected = AZURE_VOICES.find((v) => v.value === voice);
+                  if (!selected) return null;
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      <RoseCurveIcon variant={selected.variant} size={16} />
+                      <span>
+                        {selected.label} ({selected.gender})
+                      </span>
+                    </span>
+                  );
+                })()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {AZURE_VOICES.map((v) => (
+                <SelectItem key={v.value} value={v.value} className="text-xs">
+                  <span className="flex items-center gap-2">
+                    <RoseCurveIcon variant={v.variant} size={18} />
+                    <span>
+                      {v.label} ({v.gender})
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <div className="flex flex-col gap-2">
           <Button
             onClick={handleToggleRecording}
             variant={isRecording ? "destructive" : "outline"}
