@@ -2,6 +2,7 @@ import { create } from "zustand";
 import axios from "axios";
 import { toast } from "sonner";
 import { type SarjyAgentState } from "@/hooks/use-agent-audio-visualizer-aura";
+import { DEFAULT_VOICE } from "@/lib/azure-voices";
 
 interface Message {
   role: "user" | "assistant";
@@ -24,10 +25,12 @@ interface ChatState {
   isRecording: boolean;
   isProcessing: boolean;
   textAreaInput: string;
+  voice: string;
   setMessages: (messages: Message[]) => void;
   setSessionId: (id: string) => void;
   setSessions: (sessions: Session[]) => void;
   setIsLoadingSession: (v: boolean) => void;
+  setVoice: (voice: string) => void;
   addMessage: (message: Message) => void;
   setTextAreaInput: (input: string) => void;
   clearHistory: () => void;
@@ -74,6 +77,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isRecording: false,
   isProcessing: false,
   textAreaInput: "",
+  voice: DEFAULT_VOICE,
 
   setMessages: (messages) => set({ messages }),
 
@@ -88,6 +92,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   })),
 
   setTextAreaInput: (val) => set({ textAreaInput: val }),
+
+  setVoice: (voice) => set({ voice }),
 
   clearHistory: () => {
     set({ messages: [] });
@@ -155,6 +161,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         message: input,
         sessionId: state.sessionId,
         messages: state.messages.slice(-10),
+        voice: state.voice,
       });
 
       if (data.reply) state.addMessage({ role: "assistant", content: data.reply });

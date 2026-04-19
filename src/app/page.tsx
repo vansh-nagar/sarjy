@@ -19,6 +19,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import SarjyMascot from "@/components/main/sarjy-mascot";
 
 const Page = () => {
   const [agentState, setAgentState] = useState<SarjyAgentState>("idle");
@@ -50,7 +51,9 @@ const Page = () => {
     <div className="flex flex-col max-h-screen min-h-screen bg-muted  text-foreground transition-colors duration-300">
       <header className="px-4 py-3 mx-3 mt-3 flex rounded-xl bg-background border justify-between items-center sticky top-0 z-50 transition-all duration-300">
         <div className="flex items-center gap-6">
-          <h1 className="text-2xl font-bold tracking-tight">Sarjy :)</h1>
+          <h1 className="text-2xl flex gap-2 font-bold tracking-tight">
+            Sarjy <SarjyMascot />
+          </h1>
         </div>
         <Tabs
           value={visualizerType}
@@ -152,25 +155,15 @@ const Page = () => {
           <Show when="signed-out">
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center">
               <div className="glass-overlay p-8 rounded-3xl flex flex-col items-center gap-5 max-w-[85%] text-center">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center ring-4 ring-primary/5">
-                  <Lock className="h-10 w-10 text-primary" />
+                <div className="w-20 h-20 scale-200 rounded-full flex items-center justify-center">
+                  <SarjyMascot />{" "}
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black tracking-tight">
-                    Sarjy Assistant is Locked
-                  </h3>
+                  <h3 className="text-xl">Sarjy Assistant is Locked</h3>
                 </div>
                 <SignInButton mode="modal">
                   <Button size="lg">Sign In to Unlock</Button>
                 </SignInButton>
-                <p className="text-xs text-muted-foreground/60">
-                  Don't have an account?{" "}
-                  <SignUpButton mode="modal">
-                    <span className="text-primary font-semibold hover:underline cursor-pointer">
-                      Sign up free
-                    </span>
-                  </SignUpButton>
-                </p>
               </div>
             </div>
             {/* Decorative blurred background */}

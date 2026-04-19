@@ -11,7 +11,7 @@ const REDIS_TTL = 3600;
 
 export const POST = async (req: NextRequest) => {
   try {
-    const { message, sessionId, messages = [] } = await req.json();
+    const { message, sessionId, messages = [], voice = "en-US-JennyMultilingualNeural" } = await req.json();
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -194,7 +194,7 @@ Rules:
             "X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3",
           },
           data: `<speak version='1.0' xml:lang='en-US'>
-            <voice xml:lang='en-US' xml:gender='Female' name='en-US-JennyMultilingualNeural'>
+            <voice xml:lang='en-US' name='${voice}'>
               ${cleanText}
             </voice>
           </speak>`,
