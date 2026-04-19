@@ -3,6 +3,7 @@ import { generateText, tool, stepCountIs } from "ai";
 import { groq } from "@ai-sdk/groq";
 import z from "zod";
 import axios from "axios";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 
 export const POST = async (req: NextRequest) => {
   try {
@@ -14,6 +15,20 @@ export const POST = async (req: NextRequest) => {
         { status: 400 }
       );
     }
+
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please sign in to chat." },
+        { status: 401 }
+      );
+    }
+
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+    const email = user.emailAddresses?.[0]?.emailAddress;
+    const userContext = `\nThe authenticated user's details:\n- Name: ${name || "Unknown"}\n- Email: ${email || "Unknown"}\n- ID: ${user.id}\nTreat this user warmly and address them by name if appropriate.`;
 
     const conversationMessages = [
       ...messages.map((m: { role: string; content: string }) => ({
@@ -88,6 +103,7 @@ Your personality:
 - You have a bit of personality — you can be playful, enthusiastic, and empathetic.
 
 ${memoryContext ? memoryContext : "No user memory available yet."}
+${userContext}
 
 Your capabilities:
 1. **Weather** — You can check weather for any city using the getWeather tool.
