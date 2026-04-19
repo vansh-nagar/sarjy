@@ -108,7 +108,7 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
         )}
       </div>
 
-      <Conversation className="w-full flex-1 mb-20 custom-scrollbar">
+      <Conversation className="w-full  flex-1 mb-20 custom-scrollbar">
         <ConversationContent className="p-0 pb-20">
           {messages.length === 0 ? (
             <ConversationEmptyState
@@ -168,6 +168,7 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
             disabled={isLoading || !textAreaInput.trim()}
           >
             {isLoading ? <Loader2 className="animate-spin" /> : <Send />}
+
           </Button>
         </div>
       </div>
