@@ -4,16 +4,20 @@ import { groq } from "@ai-sdk/groq";
 import z from "zod";
 import axios from "axios";
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/db";
+import { redis } from "@/lib/redis";
+
+const REDIS_TTL = 3600;
 
 export const POST = async (req: NextRequest) => {
   try {
-    const { message, memoryContext, messages = [] } = await req.json();
+    const { message, sessionId, messages = [] } = await req.json();
 
     if (!message) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+    if (!sessionId) {
+      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
     }
 
     const { userId } = await auth();
@@ -29,6 +33,31 @@ export const POST = async (req: NextRequest) => {
     const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
     const email = user.emailAddresses?.[0]?.emailAddress;
     const userContext = `\nThe authenticated user's details:\n- Name: ${name || "Unknown"}\n- Email: ${email || "Unknown"}\n- ID: ${user.id}\nTreat this user warmly and address them by name if appropriate.`;
+
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: { name: name || "Unknown", email: email || "" },
+      create: { id: userId, name: name || "Unknown", email: email || "" },
+    });
+
+    const pastMessages = await prisma.message.findMany({
+      where: {
+        session: { userId },
+        sessionId: { not: sessionId },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { role: true, content: true },
+    });
+
+    const memoryContext =
+      pastMessages.length > 0
+        ? "Memory from previous sessions:\n" +
+          pastMessages
+            .reverse()
+            .map((m) => `${m.role}: ${m.content}`)
+            .join("\n")
+        : null;
 
     const conversationMessages = [
       ...messages.map((m: { role: string; content: string }) => ({
@@ -46,9 +75,7 @@ export const POST = async (req: NextRequest) => {
           description:
             "Get the current weather for a given city. Use this whenever the user asks about weather, temperature, or forecast.",
           inputSchema: z.object({
-            city: z
-              .string()
-              .describe("The city name to get weather for"),
+            city: z.string().describe("The city name to get weather for"),
           }),
           execute: async ({ city }) => {
             try {
@@ -59,9 +86,7 @@ export const POST = async (req: NextRequest) => {
               const data = await response.json();
               const current = data.current_condition?.[0];
               const area = data.nearest_area?.[0];
-
               if (!current) return { error: "No weather data found" };
-
               return {
                 city: area?.areaName?.[0]?.value || city,
                 region: area?.region?.[0]?.value || "",
@@ -69,18 +94,14 @@ export const POST = async (req: NextRequest) => {
                 temperature: current.temp_C,
                 feelsLike: current.FeelsLikeC,
                 humidity: current.humidity,
-                description:
-                  current.weatherDesc?.[0]?.value || "Unknown",
+                description: current.weatherDesc?.[0]?.value || "Unknown",
                 windSpeed: current.windspeedKmph,
                 windDir: current.winddir16Point,
                 uvIndex: current.uvIndex,
               };
             } catch (err) {
               console.error("Weather tool error:", err);
-              return {
-                error:
-                  "Failed to fetch weather data. Please try again.",
-              };
+              return { error: "Failed to fetch weather data. Please try again." };
             }
           },
         }),
@@ -88,8 +109,18 @@ export const POST = async (req: NextRequest) => {
           description: "Get current time.",
           inputSchema: z.object({}),
           execute: async () => ({
-            time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }),
-            date: new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" }),
+            time: new Date().toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Asia/Kolkata",
+            }),
+            date: new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+              timeZone: "Asia/Kolkata",
+            }),
           }),
         }),
       },
@@ -102,7 +133,7 @@ Your personality:
 - You remember user info and reference it naturally.
 - You have a bit of personality — you can be playful, enthusiastic, and empathetic.
 
-${memoryContext ? memoryContext : "No user memory available yet."}
+${memoryContext ?? "No previous session memory available."}
 ${userContext}
 
 Your capabilities:
@@ -120,6 +151,27 @@ Rules:
 - Be genuinely helpful and make the user feel heard.
 - Never say "I'm an AI" or "as an AI" — just be Sarjy.`,
     });
+
+    await prisma.message.createMany({
+      data: [
+        { sessionId, role: "user", content: message },
+        { sessionId, role: "assistant", content: text },
+      ],
+    });
+
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: { updatedAt: new Date() },
+    });
+
+    const cacheKey = `session:${sessionId}`;
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const existing = JSON.parse(cached) as { role: string; content: string }[];
+      existing.push({ role: "user", content: message });
+      existing.push({ role: "assistant", content: text });
+      await redis.set(cacheKey, JSON.stringify(existing), "EX", REDIS_TTL);
+    }
 
     const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
     const AZURE_REGION = process.env.AZURE_SPEECH_REGION;
@@ -149,14 +201,11 @@ Rules:
           responseType: "arraybuffer",
         });
 
-        const audioBuffer = ttsResponse.data;
-        audio = Buffer.from(audioBuffer).toString("base64"); // binary to buffer
+        audio = Buffer.from(ttsResponse.data).toString("base64");
       } catch (ttsError) {
         console.error("TTS error:", ttsError);
       }
     }
-
-    console.log("Sarjy response:", text);
 
     return NextResponse.json({ reply: text, audio }, { status: 200 });
   } catch (error: any) {

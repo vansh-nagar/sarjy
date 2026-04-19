@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AIChat from "@/components/main/ai-chat";
+import SessionsSidebar from "@/components/main/sessions-sidebar";
 import { AgentAudioVisualizerAura } from "@/components/agent-audio-visualizer-aura";
 import { AgentAudioVisualizerRadial } from "@/components/agent-audio-visualizer-radial";
 import { AgentAudioVisualizerWave } from "@/components/agent-audio-visualizer-wave";
@@ -46,8 +47,8 @@ const Page = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted text-foreground transition-colors duration-300">
-      <header className="px-4 py-3 mx-3 mt-3 flex rounded-xl premium-container justify-between items-center sticky top-0 z-50 transition-all duration-300">
+    <div className="flex flex-col max-h-screen min-h-screen bg-muted  text-foreground transition-colors duration-300">
+      <header className="px-4 py-3 mx-3 mt-3 flex rounded-xl bg-background border justify-between items-center sticky top-0 z-50 transition-all duration-300">
         <div className="flex items-center gap-6">
           <h1 className="text-2xl font-bold tracking-tight">Sarjy :)</h1>
         </div>
@@ -101,7 +102,12 @@ const Page = () => {
       </header>
 
       <main className="flex-1 flex overflow-hidden bg-muted">
-        <div className="flex-1 m-3 rounded-xl h-[calc(100vh-92px)] premium-container flex flex-col justify-center items-center relative overflow-hidden transition-all duration-300">
+        <div className="mr-3">
+          <Show when="signed-in">
+            <SessionsSidebar />
+          </Show>
+        </div>
+        <div className="flex-1 m-3 ml-0 rounded-xl h-[calc(100vh-92px)] bg-background border flex flex-col justify-center items-center relative overflow-hidden transition-all duration-300">
           {visualizerType === "aura" ? (
             <AgentAudioVisualizerAura
               size="xl"
@@ -139,14 +145,14 @@ const Page = () => {
           )}
         </div>
 
-        <div className="w-[400px] h-[calc(100vh-92px)] flex flex-col p-3 premium-container mr-3 my-3 rounded-xl relative overflow-hidden transition-all duration-300 shadow-2xl">
+        <div className="w-[400px] bg-background border  h-[calc(100vh-92px)] flex flex-col p-3 mr-3 my-3 rounded-xl relative overflow-hidden transition-all duration-300">
           <Show when="signed-in">
             <AIChat onStateChange={setAgentState} onVolumeChange={setVolume} />
           </Show>
           <Show when="signed-out">
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center">
-              <div className=" glass-overlay p-8 rounded-3xl flex flex-col items-center gap-5 max-w-[85%] text-center">
-                <div className="w-20 glass-overlay h-20 rounded-full flex items-center justify-center ring-4 ring-primary/5">
+              <div className="glass-overlay p-8 rounded-3xl flex flex-col items-center gap-5 max-w-[85%] text-center">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center ring-4 ring-primary/5">
                   <Lock className="h-10 w-10 text-primary" />
                 </div>
                 <div className="space-y-2">
@@ -168,7 +174,7 @@ const Page = () => {
               </div>
             </div>
             {/* Decorative blurred background */}
-            <div className="flex-1 duration-300 opacity-10 blur-xl pointer-events-none select-none grayscale transform scale-110">
+            <div className="flex-1  duration-300  opacity-10 blur-xl pointer-events-none select-none grayscale transform scale-110">
               <AIChat onStateChange={() => {}} onVolumeChange={() => {}} />
             </div>
           </Show>

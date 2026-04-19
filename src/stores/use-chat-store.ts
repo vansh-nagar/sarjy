@@ -6,15 +6,28 @@ import { type SarjyAgentState } from "@/hooks/use-agent-audio-visualizer-aura";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  createdAt?: string;
+}
+
+interface Session {
+  id: string;
+  title: string;
+  updatedAt: string;
 }
 
 interface ChatState {
   messages: Message[];
+  sessionId: string | null;
+  sessions: Session[];
   isLoading: boolean;
+  isLoadingSession: boolean;
   isRecording: boolean;
   isProcessing: boolean;
   textAreaInput: string;
   setMessages: (messages: Message[]) => void;
+  setSessionId: (id: string) => void;
+  setSessions: (sessions: Session[]) => void;
+  setIsLoadingSession: (v: boolean) => void;
   addMessage: (message: Message) => void;
   setTextAreaInput: (input: string) => void;
   clearHistory: () => void;
@@ -54,27 +67,30 @@ const updateVolume = (
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
+  sessionId: null,
+  sessions: [],
   isLoading: false,
+  isLoadingSession: false,
   isRecording: false,
   isProcessing: false,
   textAreaInput: "",
 
-  setMessages: (messages) => {
-    set({ messages });
-    localStorage.setItem("sarjy-chat-history", JSON.stringify(messages));
-  },
+  setMessages: (messages) => set({ messages }),
 
-  addMessage: (msg) => {
-    const messages = [...get().messages, msg];
-    set({ messages });
-    localStorage.setItem("sarjy-chat-history", JSON.stringify(messages));
-  },
+  setSessionId: (id) => set({ sessionId: id }),
+
+  setSessions: (sessions) => set({ sessions }),
+
+  setIsLoadingSession: (v) => set({ isLoadingSession: v }),
+
+  addMessage: (msg) => set((s) => ({
+    messages: [...s.messages, { ...msg, createdAt: msg.createdAt ?? new Date().toISOString() }],
+  })),
 
   setTextAreaInput: (val) => set({ textAreaInput: val }),
 
   clearHistory: () => {
     set({ messages: [] });
-    localStorage.removeItem("sarjy-chat-history");
     toast.success("History cleared");
   },
 
@@ -90,7 +106,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     onVolume?.(0);
   },
 
-  startListening: async (onVolume, onsubmit) => {
+  startListening: async (_onVolume, onsubmit) => {
     try {
       set({ isProcessing: true });
       const {
@@ -121,14 +137,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       recognizer.startContinuousRecognitionAsync(() =>
         toast.success("Listening..."),
       );
-    } catch (err) {
+    } catch {
       set({ isRecording: false, isProcessing: false });
     }
   },
 
   onsubmit: async (input, onState, onVolume) => {
     const state = get();
-    if (!input.trim() || state.isLoading) return;
+    if (!input.trim() || state.isLoading || !state.sessionId) return;
 
     state.stopListening(onVolume);
     set({ isLoading: true });
@@ -137,14 +153,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const { data } = await axios.post("/api/chat", {
         message: input,
+        sessionId: state.sessionId,
         messages: state.messages.slice(-10),
       });
 
-      if (data.reply)
-        state.addMessage({ role: "assistant", content: data.reply });
-      if (data.audio) {
+      if (data.reply) state.addMessage({ role: "assistant", content: data.reply });
 
-        //converting base 64 to playable file
+      if (data.audio) {
         const audioUrl = URL.createObjectURL(
           (
             await axios.get(`data:audio/mp3;base64,${data.audio}`, {
@@ -152,7 +167,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             })
           ).data,
         );
-        // stop old
         refs.audio?.pause();
         const audio = (refs.audio = new Audio(audioUrl));
 
@@ -177,7 +191,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         };
         audio.play();
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to get response");
     } finally {
       set({ isLoading: false });
