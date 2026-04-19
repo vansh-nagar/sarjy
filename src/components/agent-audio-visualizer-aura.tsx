@@ -1,24 +1,26 @@
-'use client';
+"use client";
 
-import React, { useMemo, type ComponentProps } from 'react';
-import { type VariantProps, cva } from 'class-variance-authority';
+import React, { useMemo, type ComponentProps } from "react";
+import { type VariantProps, cva } from "class-variance-authority";
 
-import { ReactShaderToy } from '@/components/react-shader-toy';
+import { ReactShaderToy } from "@/components/react-shader-toy";
 import {
   useAgentAudioVisualizerAura,
   type SarjyAgentState,
-} from '@/hooks/use-agent-audio-visualizer-aura';
-import { cn } from '@/lib/utils';
+} from "@/hooks/use-agent-audio-visualizer-aura";
+import { cn } from "@/lib/utils";
 
-const DEFAULT_COLOR = '#1FD5F9';
+const DEFAULT_COLOR = "#1FD5F9";
 
 function hexToRgb(hexColor: string) {
   try {
-    const rgbColor = hexColor.match(/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/);
+    const rgbColor = hexColor.match(
+      /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+    );
 
     if (rgbColor) {
       const [, r, g, b] = rgbColor;
-      const color = [r, g, b].map((c = '00') => parseInt(c, 16) / 255);
+      const color = [r, g, b].map((c = "00") => parseInt(c, 16) / 255);
 
       return color;
     }
@@ -210,7 +212,7 @@ interface AuraShaderProps {
   color?: `#${string}`;
   colorShift?: number;
   brightness?: number;
-  themeMode?: 'dark' | 'light';
+  themeMode?: "dark" | "light";
 }
 
 function AuraShader({
@@ -223,11 +225,11 @@ function AuraShader({
   color = DEFAULT_COLOR,
   colorShift = 1.0,
   brightness = 1.0,
-  themeMode = 'dark',
+  themeMode = "dark",
   ref,
   className,
   ...props
-}: AuraShaderProps & ComponentProps<'div'>) {
+}: AuraShaderProps & ComponentProps<"div">) {
   const rgbColor = useMemo(() => hexToRgb(color), [color]);
 
   return (
@@ -237,81 +239,74 @@ function AuraShader({
         animateWhenNotVisible={true}
         devicePixelRatio={globalThis.devicePixelRatio ?? 1}
         uniforms={{
-          uSpeed: { type: '1f', value: speed },
-          uBlur: { type: '1f', value: blur },
-          uScale: { type: '1f', value: scale },
-          uShape: { type: '1f', value: shape },
-          uFrequency: { type: '1f', value: frequency },
-          uAmplitude: { type: '1f', value: amplitude },
-          uBloom: { type: '1f', value: 0.0 },
-          uMix: { type: '1f', value: brightness },
-          uSpacing: { type: '1f', value: 0.5 },
-          uColorShift: { type: '1f', value: colorShift },
-          uVariance: { type: '1f', value: 0.1 },
-          uSmoothing: { type: '1f', value: 1.0 },
-          uMode: { type: '1f', value: themeMode === 'light' ? 1.0 : 0.0 },
-          uColor: { type: '3fv', value: rgbColor ?? [0, 0.7, 1] },
+          uSpeed: { type: "1f", value: speed },
+          uBlur: { type: "1f", value: blur },
+          uScale: { type: "1f", value: scale },
+          uShape: { type: "1f", value: shape },
+          uFrequency: { type: "1f", value: frequency },
+          uAmplitude: { type: "1f", value: amplitude },
+          uBloom: { type: "1f", value: 0.0 },
+          uMix: { type: "1f", value: brightness },
+          uSpacing: { type: "1f", value: 0.5 },
+          uColorShift: { type: "1f", value: colorShift },
+          uVariance: { type: "1f", value: 0.1 },
+          uSmoothing: { type: "1f", value: 1.0 },
+          uMode: { type: "1f", value: themeMode === "light" ? 1.0 : 0.0 },
+          uColor: { type: "3fv", value: rgbColor ?? [0, 0.7, 1] },
         }}
         onError={(error) => {
-          console.error('Shader error:', error);
+          console.error("Shader error:", error);
         }}
         onWarning={(warning) => {
-          console.warn('Shader warning:', warning);
+          console.warn("Shader warning:", warning);
         }}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: "100%", height: "100%" }}
       />
     </div>
   );
 }
 
-AuraShader.displayName = 'AuraShader';
+AuraShader.displayName = "AuraShader";
 
-export const AgentAudioVisualizerAuraVariants = cva(['aspect-square'], {
+export const AgentAudioVisualizerAuraVariants = cva(["aspect-square"], {
   variants: {
     size: {
-      icon: 'h-[24px] gap-[2px]',
-      sm: 'h-[56px] gap-[4px]',
-      md: 'h-[112px] gap-[8px]',
-      lg: 'h-[224px] gap-[16px]',
-      xl: 'h-[448px] gap-[32px]',
+      icon: "h-[24px] gap-[2px]",
+      sm: "h-[56px] gap-[4px]",
+      md: "h-[112px] gap-[8px]",
+      lg: "h-[224px] gap-[16px]",
+      xl: "h-[448px] gap-[32px]",
     },
   },
   defaultVariants: {
-    size: 'md',
+    size: "md",
   },
 });
 
 export interface AgentAudioVisualizerAuraProps {
-  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: "icon" | "sm" | "md" | "lg" | "xl";
   state?: SarjyAgentState;
   color?: `#${string}`;
   colorShift?: number;
-  themeMode?: 'dark' | 'light';
-  /** Raw audio volume 0-1, no LiveKit dependency */
+  themeMode?: "dark" | "light";
   volume?: number;
 }
 
-/**
- * Shader-based audio visualizer — adapted for Sarjy (no LiveKit dependency).
- * Responds to SarjyAgentState and raw audio volume.
- */
 export function AgentAudioVisualizerAura({
-  size = 'lg',
-  state = 'idle',
+  size = "lg",
+  state = "idle",
   color = DEFAULT_COLOR,
   colorShift = 0.05,
   volume = 0,
-  themeMode = 'dark',
+  themeMode = "dark",
   className,
   ref,
   ...props
 }: AgentAudioVisualizerAuraProps &
-  ComponentProps<'div'> &
+  ComponentProps<"div"> &
   VariantProps<typeof AgentAudioVisualizerAuraVariants>) {
-  const { speed, scale, amplitude, frequency, brightness } = useAgentAudioVisualizerAura(
-    state,
-    volume,
-  );
+  const { speed, scale, amplitude, frequency, brightness } =
+    useAgentAudioVisualizerAura(state, volume);
 
   return (
     <AuraShader
