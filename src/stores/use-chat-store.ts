@@ -87,9 +87,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setIsLoadingSession: (v) => set({ isLoadingSession: v }),
 
-  addMessage: (msg) => set((s) => ({
-    messages: [...s.messages, { ...msg, createdAt: msg.createdAt ?? new Date().toISOString() }],
-  })),
+  addMessage: (msg) =>
+    set((s) => ({
+      messages: [
+        ...s.messages,
+        { ...msg, createdAt: msg.createdAt ?? new Date().toISOString() },
+      ],
+    })),
 
   setTextAreaInput: (val) => set({ textAreaInput: val }),
 
@@ -153,18 +157,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!input.trim() || state.isLoading || !state.sessionId) return;
 
     state.stopListening(onVolume);
-    set({ isLoading: true });
-    state.addMessage({ role: "user", content: input });
+    const userMsg: Message = {
+      role: "user",
+      content: input,
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ isLoading: true, messages: [...s.messages, userMsg] }));
 
     try {
       const { data } = await axios.post("/api/chat", {
         message: input,
         sessionId: state.sessionId,
-        messages: state.messages.slice(-10),
+        messages: [...state.messages, userMsg].slice(-10),
         voice: state.voice,
       });
 
-      if (data.reply) state.addMessage({ role: "assistant", content: data.reply });
+      if (data.reply) {
+        set((s) => ({
+          messages: [
+            ...s.messages,
+            {
+              role: "assistant",
+              content: data.reply,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }));
+      }
 
       if (data.audio) {
         const audioUrl = URL.createObjectURL(
