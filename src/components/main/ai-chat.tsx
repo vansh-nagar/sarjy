@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { Mic, MicOff, Send, MessageSquare } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  Send,
+  MessageSquare,
+  MessageSquarePlus,
+} from "lucide-react";
 import { useChatStore } from "@/stores/use-chat-store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
@@ -34,6 +40,7 @@ interface AIChatProps {
 const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
   const {
     messages,
+    sessionId,
     isLoading,
     isLoadingSession,
     isRecording,
@@ -49,6 +56,8 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
     stopListening,
     onsubmit,
   } = useChatStore();
+
+  const hasSession = !!sessionId;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initRan = useRef(false);
@@ -146,7 +155,13 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
       )}
       <Conversation className="w-full flex-1 mb-28 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <ConversationContent className="p-0 pb-20">
-          {messages.length === 0 ? (
+          {!hasSession ? (
+            <ConversationEmptyState
+              icon={<MessageSquarePlus className="size-12" />}
+              title="No session selected"
+              description="Create a new chat from the sidebar to get started."
+            />
+          ) : messages.length === 0 ? (
             <ConversationEmptyState
               icon={<MessageSquare className="size-12" />}
               title="No messages"
@@ -156,7 +171,11 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
             messages.map((msg, i) => (
               <Message from={msg.role} key={i}>
                 <MessageContent>
-                  <Response>{msg.content}</Response>
+                  {msg.role === "user" ? (
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  ) : (
+                    <Response>{msg.content}</Response>
+                  )}
                   {msg.createdAt && (
                     <p className="text-[10px] text-muted-foreground mt-1 select-none">
                       {formatTime(msg.createdAt)}
@@ -174,7 +193,13 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
         <Textarea
           ref={textareaRef}
           className="rounded-lg resize-none flex-1 min-h-16 max-h-16  border-none"
-          placeholder={isRecording ? "Listening..." : "Type here..."}
+          placeholder={
+            !hasSession
+              ? "Create a session to start chatting..."
+              : isRecording
+                ? "Listening..."
+                : "Type here..."
+          }
           value={textAreaInput}
           onChange={(e) => setTextAreaInput(e.target.value)}
           onKeyDown={(e) => {
@@ -183,10 +208,14 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
               handleSend();
             }
           }}
-          disabled={isLoading}
+          disabled={isLoading || !hasSession}
         />
         <div className="flex gap-2 items-center">
-          <Select value={voice} onValueChange={setVoice} disabled={isLoading}>
+          <Select
+            value={voice}
+            onValueChange={setVoice}
+            disabled={isLoading || !hasSession}
+          >
             <SelectTrigger className="h-9 w-44 text-xs">
               <SelectValue placeholder="Voice">
                 {(() => {
@@ -221,7 +250,7 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
             onClick={handleToggleRecording}
             variant={isRecording ? "destructive" : "outline"}
             size="icon"
-            disabled={isLoading}
+            disabled={isLoading || !hasSession}
           >
             {isProcessing ? (
               <RoseFourLoader />
@@ -236,7 +265,7 @@ const AIChat = ({ onStateChange, onVolumeChange }: AIChatProps) => {
             onClick={handleSend}
             variant="default"
             size="icon"
-            disabled={isLoading || !textAreaInput.trim()}
+            disabled={isLoading || !hasSession || !textAreaInput.trim()}
           >
             {isLoading ? <RoseFourLoader /> : <Send />}
           </Button>

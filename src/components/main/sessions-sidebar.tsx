@@ -12,18 +12,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  MessageSquarePlus,
-  MessageSquare,
-  Trash2,
-  Loader2,
-  Pencil,
-} from "lucide-react";
+import { MessageSquarePlus, Trash2, Loader2, Pencil } from "lucide-react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const SessionsSidebar = () => {
+const SessionsSidebar = ({ className }: { className?: string }) => {
   const {
     sessions,
     sessionId,
@@ -160,7 +154,12 @@ const SessionsSidebar = () => {
 
   return (
     <>
-      <div className="w-56 bg-background border h-[calc(100vh-92px)] flex flex-col ml-3 my-3 rounded-xl overflow-hidden shrink-0">
+      <div
+        className={cn(
+          "w-56 bg-background border h-[calc(100vh-92px)] flex flex-col ml-3 my-3 rounded-xl overflow-hidden shrink-0",
+          className,
+        )}
+      >
         <div className="p-3 border-b">
           <Button
             onClick={() => setNewChatOpen(true)}
@@ -249,7 +248,7 @@ const SessionsSidebar = () => {
             <Button onClick={handleCreate} disabled={!title.trim() || creating}>
               {creating ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (
@@ -330,7 +329,7 @@ const SessionsSidebar = () => {
             >
               {deleting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Deleting...
                 </>
               ) : (
